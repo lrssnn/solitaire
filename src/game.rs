@@ -1,5 +1,4 @@
 use std::fmt::Display;
-extern crate rand;
 
 pub struct Game {
     piles: [Vec<Card>; 7],
@@ -8,69 +7,55 @@ pub struct Game {
 }
 
 pub struct Card {
-    suit: Suit,
+    suit: String,
     number: u8,
 }
 
-pub enum Suit {
-    Hearts,
-    Diamonds,
-    Clubs,
-    Spades
-}
-    
-
 pub fn deck() -> Vec<Card> {
     let mut deck = vec![];
+    for suit in &["Hearts", "Diamonds", "Clubs", "Spades"] {
         for i in 1..14 {
-            deck.push(card(Suit::Hearts, i));
-            deck.push(card(Suit::Diamonds, i));
-            deck.push(card(Suit::Clubs, i));
-            deck.push(card(Suit::Spades, i));
+            deck.push(card(suit.clone(), i));
         }
+    }
     deck
 }
 
-pub fn card(suit: Suit, number: u8) -> Card {
-    Card { suit: suit, number: number}
+pub fn card(suit: &str, number: u8) -> Card {
+    Card { suit: suit.to_string(), number: number}
 }
 
-pub fn print_card(card: Card) {
+pub fn card_clone(card: &Card) -> Card {
+    Card { suit: card.suit.clone(), number: card.number}
+}
+
+pub fn print_card(card: &Card) {
     if card.number == 1 {
-        println!("Ace of {}", suit_string(card.suit));
+        println!("Ace of {}", card.suit);
     } else if card.number == 11 {
-        println!("Jack of {}", suit_string(card.suit));
+        println!("Jack of {}", card.suit);
     } else if card.number == 12 {
-        println!("Queen of {}", suit_string(card.suit));
+        println!("Queen of {}", card.suit);
     } else if card.number == 13 {
-        println!("King of {}", suit_string(card.suit));
+        println!("King of {}", card.suit);
     } else {
-        println!("{} of {}", card.number, suit_string(card.suit));
+        println!("{} of {}", card.number, card.suit);
     }
 }
 
-pub fn print_card_short(card: Card) {
+pub fn print_card_short(card: &Card) {
+    let mut suit = card.suit.clone();
+    suit.truncate(1);
     if card.number == 1 {
-        println!("A{}", suit_string(card.suit));
+        println!("A{}", suit);
     } else if card.number == 11 {
-        println!("J{}", suit_string(card.suit));
+        println!("J{}", suit);
     } else if card.number == 12 {
-        println!("Q{}", suit_string(card.suit));
+        println!("Q{}", suit);
     } else if card.number == 13 {
-        println!("K{}", suit_string(card.suit));
+        println!("K{}", suit);
     } else {
-        println!("{}{}", card.number, suit_string(card.suit));
-    }
-}
-
-
-pub fn suit_string(suit: Suit) -> String {
-    use self::Suit::*;
-    match suit {
-       Hearts => "Hearts".to_string(),
-       Diamonds => "Diamonds".to_string(),
-       Clubs => "Clubs".to_string(),
-       Spades => "Spades".to_string(),
+        println!("{}{}", card.number, suit);
     }
 }
 
@@ -79,11 +64,14 @@ pub fn shuffle(deck: &Vec<Card>) -> Vec<Card> {
     let mut used = [false; 52];
 
     for card in 0..52 {
+        /*
         let mut choice = rand::generate();
         while used[choice] {
             choice = rand::generate();
         }
-        res.push(deck[choice]);
+        */
+        let choice = card;
+        res.push(card_clone(&deck[choice]));
         used[choice] = true;
     }
 
