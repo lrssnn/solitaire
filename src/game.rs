@@ -1,61 +1,125 @@
 use std::fmt::Display;
+use std::clone::Clone;
 
+#[derive(Debug)]
 pub struct Game {
     piles: [Vec<Card>; 7],
     side_deck: Vec<Card>,
     foundations: [Vec<Card>; 4],
 }
 
+#[derive(Debug, Clone)]
 pub struct Card {
-    suit: String,
+    suit: char,
     number: u8,
+    up: bool,
+}
+
+pub fn game_init() -> Game {
+
+    Game {
+        piles: [vec![],vec![],vec![],vec![], vec![], vec![], vec![]],
+        side_deck: vec![],
+        foundations: [vec![], vec![], vec![], vec![]],
+    }
+
+}
+
+// Deals the given deck into the given game. The deck given should ALREADY BE SHUFFLED
+pub fn deal(game: &mut Game, deck: &mut Vec<Card>) {
+    game.foundations = [vec![], vec![], vec![], vec![]];
+
+    // Populate the piles
+    for (i, pile) in game.piles.iter_mut().enumerate() {
+        for j in 0..i {
+            println!("Pile {}, card {} (down)", i, j);
+            pile.push(deck.pop().unwrap());
+        }
+        println!("Pile {}, card up", i);
+        pile.push(reveal(&deck.pop().unwrap()));
+    }
+
+    game.side_deck = deck.to_vec();
+}
+
+pub fn print_game(game: &Game) {
+    println!("[{}]    [{}][{}][{}][{}]",
+        match game.side_deck.first() { None => "  ".to_string() , Some(c) => card_string(&c) },
+        match game.foundations[0].first() { None => "  ".to_string() , Some(c) => card_string(&c) },
+        match game.foundations[1].first() { None => "  ".to_string() , Some(c) => card_string(&c) },
+        match game.foundations[2].first() { None => "  ".to_string() , Some(c) => card_string(&c) },
+        match game.foundations[3].first() { None => "  ".to_string() , Some(c) => card_string(&c) });
+
+    println!("=========================");
+    let mut cards = true;
+    let mut row = 0;
+    while cards {
+        cards = false;
+        for pile in &game.piles {
+            if row < pile.len() {
+                cards = true;
+                print!("{} ", card_str_disp(&pile[row]));
+            } else {
+                print!("   ");
+            }
+        }
+        row += 1;
+        println!("");
+    }
 }
 
 pub fn deck() -> Vec<Card> {
     let mut deck = vec![];
-    for suit in &["Hearts", "Diamonds", "Clubs", "Spades"] {
+    for suit in &['H', 'D', 'C', 'S'] {
         for i in 1..14 {
-            deck.push(card(suit.clone(), i));
+            deck.push(card(suit, i));
         }
     }
     deck
 }
 
-pub fn card(suit: &str, number: u8) -> Card {
-    Card { suit: suit.to_string(), number: number}
+pub fn card(suit: &char, number: u8) -> Card {
+    Card { suit: suit.clone(), number: number, up: false}
 }
 
 pub fn card_clone(card: &Card) -> Card {
-    Card { suit: card.suit.clone(), number: card.number}
+    Card { suit: card.suit.clone(), number: card.number, up: card.up}
 }
 
-pub fn print_card(card: &Card) {
+pub fn reveal(card: &Card) -> Card {
+    Card { suit: card.suit.clone(), number: card.number, up: true}
+}
+
+pub fn card_str_disp(card: &Card) -> String {
+    if card.up { card_string(card) }
+    else { "XX".to_string() }
+}
+
+pub fn card_string(card: &Card) -> String {
     if card.number == 1 {
-        println!("Ace of {}", card.suit);
+        format!("A{}", card.suit)
     } else if card.number == 11 {
-        println!("Jack of {}", card.suit);
+        format!("J{}", card.suit)
     } else if card.number == 12 {
-        println!("Queen of {}", card.suit);
+        format!("Q{}", card.suit)
     } else if card.number == 13 {
-        println!("King of {}", card.suit);
+        format!("K{}", card.suit)
     } else {
-        println!("{} of {}", card.number, card.suit);
+        format!("{}{}", card.number, card.suit)
     }
 }
 
 pub fn print_card_short(card: &Card) {
-    let mut suit = card.suit.clone();
-    suit.truncate(1);
     if card.number == 1 {
-        println!("A{}", suit);
+        println!("A{}", card.suit);
     } else if card.number == 11 {
-        println!("J{}", suit);
+        println!("J{}", card.suit);
     } else if card.number == 12 {
-        println!("Q{}", suit);
+        println!("Q{}", card.suit);
     } else if card.number == 13 {
-        println!("K{}", suit);
+        println!("K{}", card.suit);
     } else {
-        println!("{}{}", card.number, suit);
+        println!("{}{}", card.number, card.suit);
     }
 }
 

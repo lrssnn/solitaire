@@ -4,12 +4,13 @@ use game::*;
 
 fn main() {
     let deck = deck();
-    for card in &deck {
-        print_card_short(card);
-    }
+    let mut deck = shuffle(&deck);
 
-    let deck = shuffle(&deck);
-    for card in &deck {
-        print_card_short(card);
-    }
+    let mut game = game_init();
+
+    deal(&mut game, &mut deck);
+
+    println!("{:?}", game);
+
+    print_game(&game);
 }
