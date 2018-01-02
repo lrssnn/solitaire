@@ -1,6 +1,7 @@
 mod game;
 
 use game::*;
+use std::io;
 
 fn main() {
     let deck = deck();
@@ -11,6 +12,26 @@ fn main() {
     deal(&mut game, &mut deck);
 
     println!("{:?}", game);
+    let mut input = String::new();
+    loop {
+        print_game(&game);
+        println!("Src pile?: ");
+        io::stdin().read_line(&mut input);
+        let src_pile: usize = input.trim().parse().unwrap();
+        input = String::new();
 
-    print_game(&game);
+        println!("src depth?: ");
+        io::stdin().read_line(&mut input);
+        let src_depth: usize = input.trim().parse().unwrap();
+        input = String::new();
+
+        println!("dest_pile?: ");
+        io::stdin().read_line(&mut input);
+        let dest_pile: usize = input.trim().parse().unwrap();
+        input = String::new();
+
+        make_move(&mut game, src_pile, src_depth, dest_pile);
+    }
+
+
 }
