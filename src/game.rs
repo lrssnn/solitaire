@@ -43,7 +43,9 @@ pub fn game_restart(game: &mut Game) {
 
 // Deals the given deck into the given game. The deck given should ALREADY BE SHUFFLED
 pub fn deal(game: &mut Game, deck: &mut Vec<Card>) {
+    game.piles = [vec![],vec![],vec![],vec![], vec![], vec![], vec![]];
     game.foundations = [vec![], vec![], vec![], vec![]];
+    game.hand = vec![];
 
     // Populate the piles
     for (i, pile) in game.piles.iter_mut().enumerate() {

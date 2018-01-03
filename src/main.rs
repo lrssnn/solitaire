@@ -24,8 +24,10 @@ fn main() {
         let src_pile: usize = input.trim().parse().unwrap();
         input = String::new();
 
-        if src_pile > 11 {
+        if src_pile == 12 {
             draw(&mut game);
+        } else if src_pile >= 13 {
+            game_restart(&mut game);
         } else {
 
             println!("src depth?: ");
