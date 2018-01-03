@@ -14,6 +14,10 @@ fn main() {
     println!("{:?}", game);
     let mut input = String::new();
     loop {
+        if game_won(&mut game) {
+            println!("============================================\nWIN\n============================================");
+            game_restart(&mut game);
+        }
         print_game(&game);
         println!("Src pile?: ");
         io::stdin().read_line(&mut input);

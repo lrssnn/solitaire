@@ -8,6 +8,9 @@ pub struct Game {
     side_deck: Vec<Card>,
     hand: Vec<Card>,
     foundations: [Vec<Card>; 4],
+    score: isize,
+    games: usize,
+    wins: usize,
 }
 
 #[derive(Debug, Clone)]
@@ -18,14 +21,24 @@ pub struct Card {
 }
 
 pub fn game_init() -> Game {
-
     Game {
         piles: [vec![],vec![],vec![],vec![], vec![], vec![], vec![]],
         side_deck: vec![],
         hand: vec![],
         foundations: [vec![], vec![], vec![], vec![]],
+        score: 0,
+        games: 0,
+        wins: 0,
     }
+}
 
+// Creates a new shuffled deck and begins the game
+pub fn game_restart(game: &mut Game) {
+    let deck = deck();
+    let mut deck = shuffle(&deck);
+    deal(game, &mut deck);
+    game.score -= 52;
+    game.games += 1;
 }
 
 // Deals the given deck into the given game. The deck given should ALREADY BE SHUFFLED
@@ -46,6 +59,7 @@ pub fn deal(game: &mut Game, deck: &mut Vec<Card>) {
 }
 
 pub fn print_game(game: &Game) {
+    println!("Score: {} | Winrate: {:4.2}%", game.score, (game.wins as f32 / game.games as f32)); 
     println!("({})[{}]  [{}][{}][{}][{}]",
         game.side_deck.len(),
         match game.hand.last() { 
@@ -82,6 +96,17 @@ pub fn print_game(game: &Game) {
         row += 1;
         println!("");
     }
+}
+
+pub fn game_won(game: &mut Game) -> bool {
+    for found in &game.foundations {
+        match found.last() {
+            None => {return false},
+            Some(c) => { if c.number != 13 {return false}}
+        }
+    }
+    game.score += 5000;
+    return true;
 }
 
 // Make a move. pile indices start at zero, naturally, with piles 7 - 10 representing the
@@ -139,6 +164,7 @@ pub fn move_hand_found(game: &mut Game, dest_pile: usize) -> bool {
 
     let card = game.hand.pop().unwrap();
     game.foundations[dest_pile - 7].push(card);
+    game.score += 5;
     return true;
 }
 
@@ -197,6 +223,7 @@ pub fn move_pile_found(game: &mut Game, src_pile: usize, src_depth: usize, dest_
         None => {},
         Some(c) => {c.up = true}
     };
+    game.score += 5;
     return true;
 }
 
@@ -242,17 +269,9 @@ pub fn move_pile_pile(game: &mut Game, src_pile: usize, src_depth: usize, dest_p
 }
 
 pub fn draw(game: &mut Game) {
-    println!("Draw: ");
-    println!("Side deck: ");
-    for card in &game.side_deck {
-        println!("  {:?}", card);
-    }
-    println!("hand: ");
-    for card in &game.hand {
-        println!("  {:?}", card);
-    }
     if game.side_deck.len() == 0 {
         game.side_deck = game.hand.clone();
+        game.side_deck.reverse();
         game.hand = vec![];
     } else {
         let mut moved = 0;
