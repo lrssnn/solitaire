@@ -6,6 +6,7 @@ use std::clone::Clone;
 pub struct Game {
     piles: [Vec<Card>; 7],
     side_deck: Vec<Card>,
+    hand: Vec<Card>,
     foundations: [Vec<Card>; 4],
 }
 
@@ -21,6 +22,7 @@ pub fn game_init() -> Game {
     Game {
         piles: [vec![],vec![],vec![],vec![], vec![], vec![], vec![]],
         side_deck: vec![],
+        hand: vec![],
         foundations: [vec![], vec![], vec![], vec![]],
     }
 
@@ -44,22 +46,23 @@ pub fn deal(game: &mut Game, deck: &mut Vec<Card>) {
 }
 
 pub fn print_game(game: &Game) {
-    println!("[{}]    [{}][{}][{}][{}]",
-        match game.side_deck.first() { 
+    println!("({})[{}]  [{}][{}][{}][{}]",
+        game.side_deck.len(),
+        match game.hand.last() { 
             None => "   ".to_string() , 
             Some(c) => card_string(&c)},
 
-        match game.foundations[0].first() { 
-            None => "   ".to_string() , 
+        match game.foundations[0].last() { 
+            None => "(H)".to_string() , 
             Some(c) => card_string(&c) },
-        match game.foundations[1].first() { 
-            None => "   ".to_string() , 
+        match game.foundations[1].last() { 
+            None => "(S)".to_string() , 
             Some(c) => card_string(&c) },
-        match game.foundations[2].first() { 
-            None => "   ".to_string() , 
+        match game.foundations[2].last() { 
+            None => "(D)".to_string() , 
             Some(c) => card_string(&c) },
-        match game.foundations[3].first() { 
-            None => "   ".to_string() , 
+        match game.foundations[3].last() { 
+            None => "(C)".to_string() , 
             Some(c) => card_string(&c) }
             );
 
@@ -85,47 +88,147 @@ pub fn print_game(game: &Game) {
 // foundations (Hearts, Spades, Diamonds, Clubs)
 // src_depth refers to the number of cards to take from the source pile.
 pub fn make_move(game: &mut Game, src_pile: usize, src_depth: usize, dest_pile: usize) -> bool {
+
+    // If src pile is 11, we are taking from the draw hand:
+    //   - must be a card in the hand to take
+    //   - depth must be one
+    if src_pile == 11 {
+        if game.hand.len() == 0 {
+            println!("Error: No cards in hand");
+            return false;
+        } else if src_depth != 1 {
+            println!("Error: Cannot take more than one card from hand");
+            return false;
+        }
+
+        // Determine target area
+        if dest_pile > 6 {
+            return move_hand_found(game, dest_pile);
+        } else {
+            return move_hand_pile(game, dest_pile);
+        }
+        
+    }
+        
+        
     // Make sure that there is a card where we want to take from
     if game.piles[src_pile].len() < src_depth {
         println!("Error: Trying to take non-existant card");
         return false;
     }
-
-    // For convenience in checking validity
-    let card = (game.piles[src_pile][game.piles[src_pile].len() - src_depth]).clone();
     
-    // Make sure the cards are a legal move
     if dest_pile > 6 {
-        // Trying to move to a foundation:
-        //   - Only one card allowed
-        //   - Suit must match
-        //   - Number must be one higher
-        if src_depth != 1 || 
-          !suit_match(dest_pile, &card) || 
-          !number_match_asc(game.foundations[dest_pile - 7].len(), &card) {
-            println!("Error: Failed attempt to move to foundation");
-            return false;
-           }
-
-        // Validation has passed:
-        let card = game.piles[src_pile].pop().unwrap();
-        game.foundations[dest_pile - 7].push(card);
-        // Make sure the last card in the pile is revealed if necessary
-        match game.piles[src_pile].last_mut() {
-            None => {},
-            Some(c) => {c.up = true}
-        };
-        return true;
+        return move_pile_found(game, src_pile, src_depth, dest_pile);
+    } else {
+        return move_pile_pile(game, src_pile, src_depth, dest_pile);
     }
 
-    // Trying to move to another pile (we already know the source stack exists):
-    //   - Suit colour must alternate
-    //   - Base card number must be one lower
-    if !suit_alternates(&card, game.piles[dest_pile].last().unwrap()) ||
-      !number_match_desc(game.piles[dest_pile].last(), &card) {
-        println!("Error: Failed attempt to move to pile");
+}
+pub fn move_hand_found(game: &mut Game, dest_pile: usize) -> bool {
+    // Moving to a foundation:
+    //   - Suit must match
+    //   - number must be one higher
+    let card = game.hand.last().unwrap().clone();
+    if !suit_match(dest_pile, &card) {
+        println!("Error: Suits must match on the foundations");
         return false;
-      }
+    } else if !number_match_asc(game.foundations[dest_pile - 7].len(), &card) {
+        println!("Error: Numbers must ascend on the foundations");
+        return false;
+    }
+
+    let card = game.hand.pop().unwrap();
+    game.foundations[dest_pile - 7].push(card);
+    return true;
+}
+
+
+pub fn move_hand_pile(game: &mut Game, dest_pile: usize) -> bool {
+    // Moving to a pile:
+    //   - suit must alternate
+    //   - number must be one lower
+    let card = game.hand.last().unwrap().clone();
+    if card.number == 13 {
+        // King:
+        //   - Destination pile must be empty
+        if game.piles[dest_pile].len() != 0 {
+            println!("Error: Kings can only be moved to empty piles");
+            return false;
+        }
+    } else {
+        if game.piles[dest_pile].len() == 0 {
+            println!("Error: Only Kings can move to empty piles");
+            return false;
+        } else if !suit_alternates(&card, game.piles[dest_pile].last().unwrap()) {
+            println!("Error: Suits must alternate on the piles");
+            return false;
+        } else if !number_match_desc(game.piles[dest_pile].last(), &card) {
+            println!("Error: Numbers must decrease by one on the piles");
+            return false;
+        }
+    }
+    
+    let card = game.hand.pop().unwrap();
+    game.piles[dest_pile].push(reveal(&card));
+    return true;
+}
+pub fn move_pile_found(game: &mut Game, src_pile: usize, src_depth: usize, dest_pile: usize) -> bool {
+    // Trying to move to a foundation:
+    //   - Only one card allowed
+    //   - Suit must match
+    //   - Number must be one higher
+    let card = (game.piles[src_pile][game.piles[src_pile].len() - src_depth]).clone();
+    if src_depth != 1 {
+        println!("Error: Cannot move more than one card to foundation");
+        return false;
+    } else if !suit_match(dest_pile, &card) {
+        println!("Error: Suits must match on the foundation");
+        return false;
+    } else if !number_match_asc(game.foundations[dest_pile - 7].len(), &card) {
+        println!("Error: Numbers must ascend by one on the foundation");
+        return false;
+    }
+
+    // Validation has passed:
+    let card = game.piles[src_pile].pop().unwrap();
+    game.foundations[dest_pile - 7].push(card);
+    // Make sure the last card in the pile is revealed if necessary
+    match game.piles[src_pile].last_mut() {
+        None => {},
+        Some(c) => {c.up = true}
+    };
+    return true;
+}
+
+pub fn move_pile_pile(game: &mut Game, src_pile: usize, src_depth: usize, dest_pile: usize) -> bool {
+
+    // Trying to move to another pile (we already know the source stack exists):
+
+    let card = (game.piles[src_pile][game.piles[src_pile].len() - src_depth]).clone();
+
+    if card.number == 13 {
+        // King:
+        //   - Destination pile must be empty
+        if game.piles[dest_pile].len() != 0 {
+            println!("Error: Kings can only be moved to empty piles");
+            return false;
+        }
+    } else {
+        // Not a king: 
+        //   - Destination cannot be empty
+        //   - Suit colour must alternate
+        //   - Base card number must be one lower
+        if game.piles[dest_pile].len() == 0 {
+            println!("Error: Cannot move non-king to empty pile");
+            return false;
+        } else if !suit_alternates(&card, game.piles[dest_pile].last().unwrap()) {
+            println!("Error: Suit colours must alternate on piles");
+            return false;
+        } else if !number_match_desc(game.piles[dest_pile].last(), &card) {
+            println!("Error: Numbers must decrease by one on piles");
+            return false;
+        }
+    }
 
     // Validation has passed:
     let split_index = game.piles[src_pile].len() - src_depth;
@@ -136,8 +239,29 @@ pub fn make_move(game: &mut Game, src_pile: usize, src_depth: usize, dest_pile: 
         Some(c) => {c.up = true}
     };
     return true;
-
 }
+
+pub fn draw(game: &mut Game) {
+    println!("Draw: ");
+    println!("Side deck: ");
+    for card in &game.side_deck {
+        println!("  {:?}", card);
+    }
+    println!("hand: ");
+    for card in &game.hand {
+        println!("  {:?}", card);
+    }
+    if game.side_deck.len() == 0 {
+        game.side_deck = game.hand.clone();
+        game.hand = vec![];
+    } else {
+        let mut moved = 0;
+        while moved < 3 && game.side_deck.len() > 0 {
+            game.hand.push(game.side_deck.pop().unwrap());
+            moved += 1;
+        }
+    }
+}    
 
 pub fn suit_match(dest: usize, card: &Card) -> bool {
     match dest {

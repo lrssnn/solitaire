@@ -20,17 +20,22 @@ fn main() {
         let src_pile: usize = input.trim().parse().unwrap();
         input = String::new();
 
-        println!("src depth?: ");
-        io::stdin().read_line(&mut input);
-        let src_depth: usize = input.trim().parse().unwrap();
-        input = String::new();
+        if src_pile > 11 {
+            draw(&mut game);
+        } else {
 
-        println!("dest_pile?: ");
-        io::stdin().read_line(&mut input);
-        let dest_pile: usize = input.trim().parse().unwrap();
-        input = String::new();
+            println!("src depth?: ");
+            io::stdin().read_line(&mut input);
+            let src_depth: usize = input.trim().parse().unwrap();
+            input = String::new();
 
-        make_move(&mut game, src_pile, src_depth, dest_pile);
+            println!("dest_pile?: ");
+            io::stdin().read_line(&mut input);
+            let dest_pile: usize = input.trim().parse().unwrap();
+            input = String::new();
+
+            make_move(&mut game, src_pile, src_depth, dest_pile);
+        }
     }
 
 
