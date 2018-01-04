@@ -9,20 +9,21 @@ use super::PAIR_BLK;
 
 #[derive(Debug)]
 pub struct Game {
-    piles: [Vec<Card>; 7],
-    side_deck: Vec<Card>,
-    hand: Vec<Card>,
-    foundations: [Vec<Card>; 4],
-    score: isize,
-    games: usize,
-    wins: usize,
+    pub piles: [Vec<Card>; 7],
+    pub side_deck: Vec<Card>,
+    pub hand: Vec<Card>,
+    pub foundations: [Vec<Card>; 4],
+    pub score: isize,
+    pub games: usize,
+    pub wins: usize,
+    pub moves: usize,
 }
 
 #[derive(Debug, Clone)]
 pub struct Card {
-    suit: char,
-    number: u8,
-    up: bool,
+    pub suit: char,
+    pub number: u8,
+    pub up: bool,
 }
 
 pub fn game_init() -> Game {
@@ -34,6 +35,7 @@ pub fn game_init() -> Game {
         score: 0,
         games: 0,
         wins: 0,
+        moves: 0,
     }
 }
 
@@ -65,7 +67,12 @@ pub fn deal(game: &mut Game, deck: &mut Vec<Card>) {
 
 pub fn print_game(game: &Game) {
     // Status Line
-    term::printw(&format!("Score: {} | Winrate: {:4.2}%\n", game.score, (game.wins as f32 / game.games as f32)));
+    term::printw(&format!("Score: {:2} | Winrate: {:4.2}% ({}/{}) | Moves: {}\n", 
+                          game.score, 
+                          100.0 *(game.wins as f32 / game.games as f32),
+                          game.wins,
+                          game.games,
+                          game.moves));
     // Top line of game in parts:
     // 1. Side deck size
     term::printw(&format!("({})[", game.side_deck.len()));
@@ -131,6 +138,7 @@ pub fn game_won(game: &mut Game) -> bool {
             Some(c) => { if c.number != 13 {return false}}
         }
     }
+    game.wins += 1;
     game.score += 5000;
     return true;
 }
@@ -140,6 +148,8 @@ pub fn game_won(game: &mut Game) -> bool {
 // src_depth refers to the number of cards to take from the source pile.
 pub fn make_move(game: &mut Game, src_pile: usize, src_depth: usize, dest_pile: usize) -> bool {
 
+    game.moves += 1; // Don't talk to me
+    
     // If src pile is 11, we are taking from the draw hand:
     //   - must be a card in the hand to take
     //   - depth must be one
@@ -294,17 +304,20 @@ pub fn move_pile_pile(game: &mut Game, src_pile: usize, src_depth: usize, dest_p
     return true;
 }
 
-pub fn draw(game: &mut Game) {
+// Returns whether the hand was reset
+pub fn draw(game: &mut Game) -> bool {
     if game.side_deck.len() == 0 {
         game.side_deck = game.hand.clone();
         game.side_deck.reverse();
         game.hand = vec![];
+        return true;
     } else {
         let mut moved = 0;
         while moved < 3 && game.side_deck.len() > 0 {
             game.hand.push(reveal(&game.side_deck.pop().unwrap()));
             moved += 1;
         }
+        return false;
     }
 }    
 

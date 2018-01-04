@@ -1,5 +1,9 @@
 extern crate ncurses;
 mod game;
+mod player;
+
+use std::time;
+use std::thread::sleep;
 
 use game::*;
 use std::io;
@@ -23,8 +27,43 @@ fn main() {
     term::init_pair(PAIR_RED, COLOR_RED, COLOR_BG);
     term::init_pair(PAIR_BLK, COLOR_BLK, COLOR_BG);
 
-    play_human();
+    play_computer();
 
+}
+
+fn play_computer() {
+    let deck = deck();
+    let mut deck = shuffle(&deck);
+    let mut game = game_init();
+
+    deal(&mut game, &mut deck);
+
+    let mut player = player::create_player(game);
+
+    print_game(&player.game);
+    term::refresh();
+    let auto = true;
+    delay(auto);
+    let mut moves = 0;
+    loop {
+        if game_won(&mut player.game) {
+            game_restart(&mut player.game);
+            player::player_reset(&mut player);
+        } else {
+            term::clear();
+            if player::play_one_move(&mut player) {
+                print_game(&player.game);
+                term::refresh();
+                delay(auto);
+                moves += 1;
+            } else {
+                game_restart(&mut player.game);
+                print_game(&player.game);
+                term::refresh();
+                delay(auto);
+            }
+        }
+    }
 }
 
 fn play_human() {
@@ -139,4 +178,17 @@ fn depth_from_char(ch: i32) -> usize {
         '9' => 9,
         _ =>  99,
     }
+}
+
+fn delay(auto: bool) {
+    if auto {
+        wait_millis(100);
+    } else {
+        term::getch();
+    }
+}
+
+fn wait_millis(millis: u64) {
+    let dur = time::Duration::from_millis(millis);
+    sleep(dur);
 }
