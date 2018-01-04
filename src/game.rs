@@ -4,6 +4,9 @@ use std::clone::Clone;
 
 use super::ncurses as term;
 
+use super::PAIR_RED;
+use super::PAIR_BLK;
+
 #[derive(Debug)]
 pub struct Game {
     piles: [Vec<Card>; 7],
@@ -61,27 +64,46 @@ pub fn deal(game: &mut Game, deck: &mut Vec<Card>) {
 }
 
 pub fn print_game(game: &Game) {
-    term::printw(&format!("Score: {} | Winrate: {:4.2}%\n", game.score, (game.wins as f32 / game.games as f32))); 
-    term::printw(&format!("({})[{}]  [{}][{}][{}][{}]\n",
-        game.side_deck.len(),
-        match game.hand.last() { 
-            None => "   ".to_string() , 
-            Some(c) => card_string(&c)},
+    // Status Line
+    term::printw(&format!("Score: {} | Winrate: {:4.2}%\n", game.score, (game.wins as f32 / game.games as f32)));
+    // Top line of game in parts:
+    // 1. Side deck size
+    term::printw(&format!("({})[", game.side_deck.len()));
+    // 2. Hand
+    match game.hand.last() {
+        None => (),
+        Some(c) => set_colour(&c),
+    }
+    term::printw(&format!("{}", 
+                          match game.hand.last() {
+                              None => "   ".to_string(),
+                              Some(c) => card_string(&c),
+                          }));
+    match game.hand.last() {
+        None => (),
+        Some(c) => clear_colour(&c),
+    }
+    term::printw("]  ");
 
-        match game.foundations[0].last() { 
-            None => "(H)".to_string() , 
-            Some(c) => card_string(&c) },
-        match game.foundations[1].last() { 
-            None => "(S)".to_string() , 
-            Some(c) => card_string(&c) },
-        match game.foundations[2].last() { 
-            None => "(D)".to_string() , 
-            Some(c) => card_string(&c) },
-        match game.foundations[3].last() { 
-            None => "(C)".to_string() , 
-            Some(c) => card_string(&c) }
-            ));
-
+    // 3. Foundations
+    for found in &game.foundations {
+        term::printw("[");
+        match found.last() {
+            None => (),
+            Some(c) => set_colour(&c),
+        }
+        term::printw(&format!("{}",
+                              match found.last() {
+                                  None => "   ".to_string(),
+                                  Some(c) => card_string(&c),
+                              }));
+        match found.last() {
+            None => (),
+            Some(c) => clear_colour(&c),
+        }
+        term::printw("]");
+    }
+    term::printw("\n");
     term::printw("=============================\n");
     let mut cards = true;
     let mut row = 0;
@@ -90,7 +112,9 @@ pub fn print_game(game: &Game) {
         for pile in &game.piles {
             if row < pile.len() {
                 cards = true;
+                set_colour(&pile[row]);
                 term::printw(&format!("{} ", card_str_disp(&pile[row])));
+                clear_colour(&pile[row]);
             } else {
                 term::printw("    ");
             }
@@ -278,7 +302,7 @@ pub fn draw(game: &mut Game) {
     } else {
         let mut moved = 0;
         while moved < 3 && game.side_deck.len() > 0 {
-            game.hand.push(game.side_deck.pop().unwrap());
+            game.hand.push(reveal(&game.side_deck.pop().unwrap()));
             moved += 1;
         }
     }
@@ -371,3 +395,30 @@ pub fn shuffle(deck: &Vec<Card>) -> Vec<Card> {
     res
 }
 
+pub fn set_colour(card: &Card) {
+    if card.up {
+       match card.suit {
+           'H' | 'D' => {
+               term::attron(term::COLOR_PAIR(PAIR_RED));
+           },
+           'C' | 'S' => {
+               term::attron(term::COLOR_PAIR(PAIR_BLK));
+           },
+           _ => ()
+       }
+    }
+}
+
+pub fn clear_colour(card: &Card) {
+    if card.up {
+       match card.suit {
+           'H' | 'D' => {
+               term::attroff(term::COLOR_PAIR(PAIR_RED));
+           },
+           'C' | 'S' => {
+               term::attroff(term::COLOR_PAIR(PAIR_BLK));
+           },
+           _ => ()
+       }
+    }
+}

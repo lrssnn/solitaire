@@ -7,11 +7,24 @@ use std::char;
 
 use ncurses as term;
 
+static COLOR_RED: i16 = 16;
+static COLOR_BLK: i16 = 15;
+static COLOR_BG: i16 = 17;
+static PAIR_RED: i16 = 1;
+static PAIR_BLK: i16 = 2;
+
+
 fn main() {
     let deck = deck();
     let mut deck = shuffle(&deck);
 
     term::initscr();
+    term::start_color();
+    term::init_color(COLOR_RED, 219*4, 51*4, 47*4);
+    term::init_color(COLOR_BLK, 256*4, 256*4, 256*4);
+    term::init_color(COLOR_BG, 0, 0, 0);
+    term::init_pair(PAIR_RED, COLOR_RED, COLOR_BG);
+    term::init_pair(PAIR_BLK, COLOR_BLK, COLOR_BG);
 
     let mut game = game_init();
 
