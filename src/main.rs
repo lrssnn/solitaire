@@ -15,9 +15,6 @@ static PAIR_BLK: i16 = 2;
 
 
 fn main() {
-    let deck = deck();
-    let mut deck = shuffle(&deck);
-
     term::initscr();
     term::start_color();
     term::init_color(COLOR_RED, 219*4, 51*4, 47*4);
@@ -26,6 +23,13 @@ fn main() {
     term::init_pair(PAIR_RED, COLOR_RED, COLOR_BG);
     term::init_pair(PAIR_BLK, COLOR_BLK, COLOR_BG);
 
+    play_human();
+
+}
+
+fn play_human() {
+    let deck = deck();
+    let mut deck = shuffle(&deck);
     let mut game = game_init();
 
     deal(&mut game, &mut deck);
@@ -41,18 +45,22 @@ fn main() {
             game_restart(&mut game);
         }
         print_game(&game);
+        term::refresh();
         let mut valid = false;
         while !valid {
+            valid = false;
             loop {
                 term::printw("\nSrc pile?: ");
                 term::refresh();
                 ch = term::getch();
                 src_pile = src_index_from_char(ch);
+
                 if src_pile != 99 { break };
             }
 
             if src_pile == 12 {
                 draw(&mut game);
+                valid = true;
             } else if src_pile == 13 {
                 game_restart(&mut game);
             } else {
@@ -79,8 +87,6 @@ fn main() {
             }
         }
     }
-
-
 }
 
 // Takes a character from getch() and returns the pile index
