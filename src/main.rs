@@ -39,7 +39,7 @@ fn play_computer() {
 
     let mut player = player::create_player(game);
 
-    print_game(&player.game);
+    print_stats(&player.game);
     term::refresh();
     let auto = true;
     delay(auto);
@@ -50,12 +50,14 @@ fn play_computer() {
         } else {
             term::clear();
             if player::play_one_move(&mut player) {
-                print_game(&player.game);
+                /*
+                print_stats(&player.game);
                 term::refresh();
                 delay(auto);
+                */
             } else {
                 game_restart(&mut player.game);
-                print_game(&player.game);
+                print_stats(&player.game);
                 term::refresh();
                 delay(auto);
             }
@@ -180,7 +182,7 @@ fn depth_from_char(ch: i32) -> usize {
 
 fn delay(auto: bool) {
     if auto {
-        wait_millis(10);
+        //wait_millis(5);
     } else {
         term::getch();
     }

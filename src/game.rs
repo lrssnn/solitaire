@@ -1,6 +1,8 @@
 extern crate rand;
 use self::rand::Rng;
 use std::clone::Clone;
+use std::time;
+use std::fmt;
 
 use super::ncurses as term;
 
@@ -17,6 +19,7 @@ pub struct Game {
     pub games: usize,
     pub wins: usize,
     pub moves: usize,
+    pub started: time::Instant,
 }
 
 #[derive(Debug, Clone)]
@@ -36,6 +39,7 @@ pub fn game_init() -> Game {
         games: 0,
         wins: 0,
         moves: 0,
+        started: time::Instant::now(),
     }
 }
 
@@ -63,6 +67,21 @@ pub fn deal(game: &mut Game, deck: &mut Vec<Card>) {
     }
 
     game.side_deck = deck.to_vec();
+}
+
+pub fn print_stats(game: &Game) {
+    term::printw(&format!("Score: {} | Winrate: {:4.2}% ({}/{}) | Moves: {}\n", 
+                          game.score, 
+                          100.0 *(game.wins as f32 / game.games as f32),
+                          game.wins,
+                          game.games,
+                          game.moves));
+    let elapsed = Dur { dur: game.started.elapsed() };
+    term::printw(&format!("Testing for {}, {} games/sec, {} wins/sec",
+                          elapsed,
+                          game.games / (elapsed.dur.as_secs() as usize + 1),
+                          game.wins  / (elapsed.dur.as_secs() as usize + 1)));
+
 }
 
 pub fn print_game(game: &Game) {
@@ -425,5 +444,21 @@ pub fn clear_colour(card: &Card) {
            },
            _ => ()
        }
+    }
+}
+    
+struct Dur {
+    dur: time::Duration,
+}
+impl fmt::Display for Dur {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut secs = self.dur.as_secs();
+
+        let hrs = secs/3600;
+        secs -= hrs * 3600;
+
+        let mins = secs/60;
+        secs -= mins * 60;
+        write!(f, "{:02}:{:02}:{:02}", hrs, mins, secs)
     }
 }

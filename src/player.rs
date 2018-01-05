@@ -2,6 +2,7 @@ use super::game;
 use game::{Game, Card};
 use game::{make_move, draw};
 
+use ncurses as term;
 
 pub struct Player {
     pub game: Game,
@@ -28,11 +29,12 @@ pub fn player_reset(player: &mut Player) {
 pub fn play_one_move(player: &mut Player) -> bool {
 
     // We want to play the first move we find in a certain heirarchy of possible move types.
-    if play_hand_found(player) { return true };
-    if play_pile_found(player) { return true };
-    if play_pile_pile(player)  { return true };
-    if play_hand_pile(player)  { return true };
-    if play_draw_hand(player)  { return true };
+    if play_hand_found(player)   { return true };
+    if play_pile_found(player)   { return true };
+    if play_pile_pile(player)    { return true };
+    if play_hand_pile(player)    { return true };
+    if play_reveal_found(player) { return true };
+    if play_draw_hand(player)    { return true };
 
     false
  
@@ -224,6 +226,73 @@ fn play_draw_hand(player: &mut Player) -> bool {
         true
     }
 }
+
+fn play_reveal_found(player: &mut Player) -> bool {
+    let mut game = &mut player.game;
+
+    // We are looking for foundation cards hidden in stacks that we can reveal.
+    // Find which card each foundation needs next, if that card is present in a stack, look for a
+    // place to move the cards hiding it
+    for (suit, found) in game.foundations.clone().iter().enumerate() {
+        if found.is_empty() { continue; }
+        let target = target_card(suit, found);
+        
+        if player.restrained && target.number > player.found_level {
+            continue;
+        }
+
+        for (i, pile) in game.piles.clone().iter().enumerate() {
+            for (depth, card) in pile.iter().enumerate() {
+                let depth = pile.len() - depth - 1;
+                if card_match_exact(&card, &target) && depth != 0 {
+                    for (j, dest_pile) in game.piles.clone().iter().enumerate() {
+                        if !dest_pile.is_empty() {
+                            let bottom_card = dest_pile.last();
+                            if bottom_card.is_none() {
+                                continue;
+                            }
+                            let bottom_card = bottom_card.unwrap();
+                            if card_match_functional(&bottom_card, &card) {
+                                // We can make a move
+                                if !make_move(&mut game, i, depth, j){
+                                    println!("Error in play_reveal_found");
+                                    panic!();
+                                }
+                                player.played_this_round = true;
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    false
+}
+
+fn target_card(suit: usize, pile: &[Card]) -> Card {
+    let mut card = pile.last().unwrap();
+    let mut res = card.clone();
+    res.number += 1;
+    res
+}
+
+fn card_match_exact(a: &Card, b: &Card) -> bool {
+    a.up && b.up && a.number == b.number && a.suit == b.suit
+}
+
+fn card_match_functional(a: &Card, b: &Card) -> bool {
+    if a.number == b.number {
+        match a.suit {
+            'H' | 'D' => return b.suit == 'H' || b.suit == 'D',
+            'C' | 'S' => return b.suit == 'C' || b.suit == 'S',
+            _ => return false,
+        }
+    } else {
+        return false;
+    }
+}
+
 
 fn get_highest_card(pile: &[Card]) -> (Card, usize) {
     let mut pile = pile.to_owned();
