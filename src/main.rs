@@ -182,7 +182,7 @@ fn depth_from_char(ch: i32) -> usize {
 
 fn delay(auto: bool) {
     if auto {
-        wait_millis(100);
+        wait_millis(10);
     } else {
         term::getch();
     }

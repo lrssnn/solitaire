@@ -67,7 +67,7 @@ pub fn deal(game: &mut Game, deck: &mut Vec<Card>) {
 
 pub fn print_game(game: &Game) {
     // Status Line
-    term::printw(&format!("Score: {:2} | Winrate: {:4.2}% ({}/{}) | Moves: {}\n", 
+    term::printw(&format!("Score: {} | Winrate: {:4.2}% ({}/{}) | Moves: {}\n", 
                           game.score, 
                           100.0 *(game.wins as f32 / game.games as f32),
                           game.wins,
@@ -75,7 +75,7 @@ pub fn print_game(game: &Game) {
                           game.moves));
     // Top line of game in parts:
     // 1. Side deck size
-    term::printw(&format!("({})[", game.side_deck.len()));
+    term::printw(&format!("({:2})[", game.side_deck.len()));
     // 2. Hand
     match game.hand.last() {
         None => (),
