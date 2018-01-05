@@ -6,7 +6,6 @@ use std::time;
 use std::thread::sleep;
 
 use game::*;
-use std::io;
 use std::char;
 
 use ncurses as term;
@@ -44,7 +43,6 @@ fn play_computer() {
     term::refresh();
     let auto = true;
     delay(auto);
-    let mut moves = 0;
     loop {
         if game_won(&mut player.game) {
             game_restart(&mut player.game);
@@ -55,7 +53,6 @@ fn play_computer() {
                 print_game(&player.game);
                 term::refresh();
                 delay(auto);
-                moves += 1;
             } else {
                 game_restart(&mut player.game);
                 print_game(&player.game);
@@ -66,6 +63,7 @@ fn play_computer() {
     }
 }
 
+#[allow(dead_code)]
 fn play_human() {
     let deck = deck();
     let mut deck = shuffle(&deck);

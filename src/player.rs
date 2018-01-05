@@ -34,14 +34,14 @@ pub fn play_one_move(player: &mut Player) -> bool {
     if play_hand_pile(player)  { return true };
     if play_draw_hand(player)  { return true };
 
-    return false;
+    false
  
 }
 
 fn play_hand_found(player: &mut Player) -> bool {
     let mut game = &mut player.game;
 
-    if game.hand.len() == 0 {
+    if game.hand.is_empty() {
         return false;
     }
 
@@ -56,7 +56,7 @@ fn play_hand_found(player: &mut Player) -> bool {
         'S' => 1,
         'D' => 2,
         'C' => 3,
-        _ => 0,
+        _ => 4,
     };
 
     match game.foundations[target_suit].last() {
@@ -81,7 +81,7 @@ fn play_hand_found(player: &mut Player) -> bool {
     if update {
         player.found_level += 1;
     }
-    return true;
+    true
 }
 
 fn play_pile_found(player: &mut Player) -> bool {
@@ -89,7 +89,7 @@ fn play_pile_found(player: &mut Player) -> bool {
 
     for (i, pile) in game.piles.clone().iter().enumerate() {
         
-        if pile.len() == 0 {
+        if pile.is_empty() {
             continue;
         }
 
@@ -104,7 +104,7 @@ fn play_pile_found(player: &mut Player) -> bool {
             'S' => 1,
             'D' => 2,
             'C' => 3,
-            _ => 0,
+            _ => 4,
         };
 
         match game.foundations[target_suit].last() {
@@ -131,7 +131,7 @@ fn play_pile_found(player: &mut Player) -> bool {
         }
         return true;
     }
-    return false; 
+    false 
 }
 
 fn play_pile_pile(player: &mut Player) -> bool {
@@ -139,24 +139,24 @@ fn play_pile_pile(player: &mut Player) -> bool {
 
     for (i, pile) in game.piles.clone().iter().enumerate() {
 
-        if pile.len() == 0 {
+        if pile.is_empty() {
             continue;
         }
 
-        let (highest_card, depth) = get_highest_card(&pile);
+        let (highest_card, depth) = get_highest_card(pile);
 
         // Look at each pile other than this one for a spot to put it
         for (j, target) in game.piles.clone().iter().enumerate() {
 
             let lowest_card = target.last();
 
-            if target.len() == 0 {
+            if target.is_empty() {
                 // Moving to empty pile, we dont want non kings, or kings that are already on the
                 // base
                 if highest_card.number != 13 || depth == pile.len() {
                     continue;
                 }
-            } else if !game::suit_alternates(&lowest_card.unwrap(), &highest_card) 
+            } else if !game::suit_alternates(lowest_card.unwrap(), &highest_card) 
                 || !game::number_match_desc(lowest_card, &highest_card) {
                 continue;
             }
@@ -169,14 +169,14 @@ fn play_pile_pile(player: &mut Player) -> bool {
             return true;
         }
     }
-    return false;
+    false
 
 }
 
 fn play_hand_pile(player: &mut Player) -> bool {
     let mut game = &mut player.game;
 
-    if game.hand.len() == 0 {
+    if game.hand.is_empty() {
         return false;
     }
 
@@ -186,11 +186,11 @@ fn play_hand_pile(player: &mut Player) -> bool {
 
         let lowest_card = target.last();
 
-        if target.len() == 0 {
+        if target.is_empty() {
             if card.number != 13 {
                 continue;
             }
-        } else if !game::suit_alternates(&lowest_card.unwrap(), &card)
+        } else if !game::suit_alternates(lowest_card.unwrap(), &card)
             || !game::number_match_desc(lowest_card, &card) {
                 continue;
         }
@@ -202,7 +202,7 @@ fn play_hand_pile(player: &mut Player) -> bool {
         player.played_this_round = true;
         return true;
     }
-    return false;
+    false
 }
 
 fn play_draw_hand(player: &mut Player) -> bool {
@@ -212,21 +212,21 @@ fn play_draw_hand(player: &mut Player) -> bool {
         if player.restrained {
             player.played_this_round = false;
             player.restrained = false;
-            return true;
+            true
         } else if !player.played_this_round {
-            return false;
+            false
         } else {
             player.played_this_round = false;
             player.restrained = true;
-            return true;
+            true
         }
     } else {
-        return true;
+        true
     }
 }
 
-fn get_highest_card(pile: &Vec<Card>) -> (Card, usize) {
-    let mut pile = pile.clone();
+fn get_highest_card(pile: &[Card]) -> (Card, usize) {
+    let mut pile = pile.to_owned();
 
     let mut next = pile.pop();
     let mut card = game::card(&'D', 0); // Dummy card which will not be used
@@ -238,6 +238,6 @@ fn get_highest_card(pile: &Vec<Card>) -> (Card, usize) {
         depth += 1;
     }
 
-    return (card, depth);
+    (card, depth)
 }
     

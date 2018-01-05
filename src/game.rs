@@ -56,7 +56,7 @@ pub fn deal(game: &mut Game, deck: &mut Vec<Card>) {
 
     // Populate the piles
     for (i, pile) in game.piles.iter_mut().enumerate() {
-        for j in 0..i {
+        for _j in 0..i {
             pile.push(deck.pop().unwrap());
         }
         pile.push(reveal(&deck.pop().unwrap()));
@@ -79,16 +79,16 @@ pub fn print_game(game: &Game) {
     // 2. Hand
     match game.hand.last() {
         None => (),
-        Some(c) => set_colour(&c),
+        Some(c) => set_colour(c),
     }
     term::printw(&format!("{}", 
                           match game.hand.last() {
                               None => "   ".to_string(),
-                              Some(c) => card_string(&c),
+                              Some(c) => card_string(c),
                           }));
     match game.hand.last() {
         None => (),
-        Some(c) => clear_colour(&c),
+        Some(c) => clear_colour(c),
     }
     term::printw("]  ");
 
@@ -97,16 +97,16 @@ pub fn print_game(game: &Game) {
         term::printw("[");
         match found.last() {
             None => (),
-            Some(c) => set_colour(&c),
+            Some(c) => set_colour(c),
         }
         term::printw(&format!("{}",
                               match found.last() {
                                   None => "   ".to_string(),
-                                  Some(c) => card_string(&c),
+                                  Some(c) => card_string(c),
                               }));
         match found.last() {
             None => (),
-            Some(c) => clear_colour(&c),
+            Some(c) => clear_colour(c),
         }
         term::printw("]");
     }
@@ -140,7 +140,7 @@ pub fn game_won(game: &mut Game) -> bool {
     }
     game.wins += 1;
     game.score += 5000;
-    return true;
+    true
 }
 
 // Make a move. pile indices start at zero, naturally, with piles 7 - 10 representing the
@@ -154,7 +154,7 @@ pub fn make_move(game: &mut Game, src_pile: usize, src_depth: usize, dest_pile: 
     //   - must be a card in the hand to take
     //   - depth must be one
     if src_pile == 11 {
-        if game.hand.len() == 0 {
+        if game.hand.is_empty() {
             term::printw("Error: No cards in hand\n");
             return false;
         } else if src_depth != 1 {
@@ -179,9 +179,9 @@ pub fn make_move(game: &mut Game, src_pile: usize, src_depth: usize, dest_pile: 
     }
     
     if dest_pile > 6 {
-        return move_pile_found(game, src_pile, src_depth, dest_pile);
+        move_pile_found(game, src_pile, src_depth, dest_pile)
     } else {
-        return move_pile_pile(game, src_pile, src_depth, dest_pile);
+        move_pile_pile(game, src_pile, src_depth, dest_pile)
     }
 
 }
@@ -201,7 +201,7 @@ pub fn move_hand_found(game: &mut Game, dest_pile: usize) -> bool {
     let card = game.hand.pop().unwrap();
     game.foundations[dest_pile - 7].push(card);
     game.score += 5;
-    return true;
+    true
 }
 
 
@@ -213,26 +213,24 @@ pub fn move_hand_pile(game: &mut Game, dest_pile: usize) -> bool {
     if card.number == 13 {
         // King:
         //   - Destination pile must be empty
-        if game.piles[dest_pile].len() != 0 {
+        if !game.piles[dest_pile].is_empty() {
             term::printw("Error: Kings can only be moved to empty piles\n");
             return false;
         }
-    } else {
-        if game.piles[dest_pile].len() == 0 {
-            term::printw("Error: Only Kings can move to empty piles\n");
-            return false;
-        } else if !suit_alternates(&card, game.piles[dest_pile].last().unwrap()) {
-            term::printw("Error: Suits must alternate on the piles\n");
-            return false;
-        } else if !number_match_desc(game.piles[dest_pile].last(), &card) {
-            term::printw("Error: Numbers must decrease by one on the piles\n");
-            return false;
-        }
+    } else if game.piles[dest_pile].is_empty() {
+        term::printw("Error: Only Kings can move to empty piles\n");
+        return false;
+    } else if !suit_alternates(&card, game.piles[dest_pile].last().unwrap()) {
+        term::printw("Error: Suits must alternate on the piles\n");
+        return false;
+    } else if !number_match_desc(game.piles[dest_pile].last(), &card) {
+        term::printw("Error: Numbers must decrease by one on the piles\n");
+        return false;
     }
     
     let card = game.hand.pop().unwrap();
     game.piles[dest_pile].push(reveal(&card));
-    return true;
+    true
 }
 pub fn move_pile_found(game: &mut Game, src_pile: usize, src_depth: usize, dest_pile: usize) -> bool {
     // Trying to move to a foundation:
@@ -260,7 +258,7 @@ pub fn move_pile_found(game: &mut Game, src_pile: usize, src_depth: usize, dest_
         Some(c) => {c.up = true}
     };
     game.score += 5;
-    return true;
+    true
 }
 
 pub fn move_pile_pile(game: &mut Game, src_pile: usize, src_depth: usize, dest_pile: usize) -> bool {
@@ -272,25 +270,19 @@ pub fn move_pile_pile(game: &mut Game, src_pile: usize, src_depth: usize, dest_p
     if card.number == 13 {
         // King:
         //   - Destination pile must be empty
-        if game.piles[dest_pile].len() != 0 {
+        if !game.piles[dest_pile].is_empty() {
             term::printw("Error: Kings can only be moved to empty piles\n");
             return false;
         }
-    } else {
-        // Not a king: 
-        //   - Destination cannot be empty
-        //   - Suit colour must alternate
-        //   - Base card number must be one lower
-        if game.piles[dest_pile].len() == 0 {
+    } else if game.piles[dest_pile].is_empty() {
             term::printw("Error: Cannot move non-king to empty pile\n");
             return false;
-        } else if !suit_alternates(&card, game.piles[dest_pile].last().unwrap()) {
-            term::printw("Error: Suit colours must alternate on piles\n");
-            return false;
-        } else if !number_match_desc(game.piles[dest_pile].last(), &card) {
-            term::printw("Error: Numbers must decrease by one on piles\n");
-            return false;
-        }
+    } else if !suit_alternates(&card, game.piles[dest_pile].last().unwrap()) {
+        term::printw("Error: Suit colours must alternate on piles\n");
+        return false;
+    } else if !number_match_desc(game.piles[dest_pile].last(), &card) {
+        term::printw("Error: Numbers must decrease by one on piles\n");
+        return false;
     }
 
     // Validation has passed:
@@ -301,52 +293,52 @@ pub fn move_pile_pile(game: &mut Game, src_pile: usize, src_depth: usize, dest_p
         None => {},
         Some(c) => {c.up = true}
     };
-    return true;
+    true
 }
 
 // Returns whether the hand was reset
 pub fn draw(game: &mut Game) -> bool {
-    if game.side_deck.len() == 0 {
+    if game.side_deck.is_empty() {
         game.side_deck = game.hand.clone();
         game.side_deck.reverse();
         game.hand = vec![];
-        return true;
+        true
     } else {
         let mut moved = 0;
-        while moved < 3 && game.side_deck.len() > 0 {
+        while moved < 3 && !game.side_deck.is_empty() {
             game.hand.push(reveal(&game.side_deck.pop().unwrap()));
             moved += 1;
         }
-        return false;
+        false
     }
 }    
 
 pub fn suit_match(dest: usize, card: &Card) -> bool {
     match dest {
-        7 => return card.suit == 'H',
-        8 => return card.suit == 'S',
-        9 => return card.suit == 'D',
-        10 => return card.suit == 'C',
-        _ => return false,
+        7 => card.suit == 'H',
+        8 => card.suit == 'S',
+        9 => card.suit == 'D',
+        10 => card.suit == 'C',
+        _ => false,
     }
 }
 
 pub fn suit_alternates(a: &Card, b: &Card) -> bool {
     match a.suit {
-        'H' | 'D' => { return b.suit == 'C' || b.suit == 'S'},
-        'C' | 'S' => { return b.suit == 'H' || b.suit == 'D'},
-        _ => return false,
-    };
+        'H' | 'D' => { b.suit == 'C' || b.suit == 'S'},
+        'C' | 'S' => { b.suit == 'H' || b.suit == 'D'},
+        _ => false,
+    }
 }
 
 pub fn number_match_asc(base: usize, card: &Card) -> bool {
-    return card.number - 1 == base as u8;
+    card.number - 1 == base as u8
 }
 
 pub fn number_match_desc(dest: Option<&Card>, new: &Card) -> bool {
     match dest {
-        None => return new.number == 13,
-        Some(c) => return c.number - 1 == new.number,
+        None => new.number == 13,
+        Some(c) => c.number - 1 == new.number,
     }
 }
 
@@ -361,15 +353,15 @@ pub fn deck() -> Vec<Card> {
 }
 
 pub fn card(suit: &char, number: u8) -> Card {
-    Card { suit: suit.clone(), number: number, up: false}
+    Card { suit: *suit, number: number, up: false}
 }
 
 pub fn card_clone(card: &Card) -> Card {
-    Card { suit: card.suit.clone(), number: card.number, up: card.up}
+    Card { suit: card.suit, number: card.number, up: card.up}
 }
 
 pub fn reveal(card: &Card) -> Card {
-    Card { suit: card.suit.clone(), number: card.number, up: true}
+    Card { suit: card.suit, number: card.number, up: true}
 }
 
 pub fn card_str_disp(card: &Card) -> String {
@@ -391,12 +383,12 @@ pub fn card_string(card: &Card) -> String {
     }
 }
 
-pub fn shuffle(deck: &Vec<Card>) -> Vec<Card> {
+pub fn shuffle(deck: &[Card]) -> Vec<Card> {
     let mut rng = rand::thread_rng();
     let mut res = vec![];
     let mut used = [false; 52];
 
-    for card in 0..52 {
+    for _card in 0..52 {
         let mut choice: usize = rng.gen::<usize>() % 52;
         while used[choice] {
             choice = rng.gen::<usize>() % 52;
