@@ -3,6 +3,8 @@ use self::rand::Rng;
 use std::clone::Clone;
 use std::time;
 use std::fmt;
+use std::io;
+use std::io::Write;
 
 use super::ncurses as term;
 
@@ -70,17 +72,18 @@ pub fn deal(game: &mut Game, deck: &mut Vec<Card>) {
 }
 
 pub fn print_stats(game: &Game) {
-    term::printw(&format!("Score: {} | Winrate: {:4.2}% ({}/{}) | Moves: {}\n", 
+    let elapsed = Dur { dur: game.started.elapsed() };
+    print!("{} | {} g/s, {} w/s ",
+                          elapsed,
+                          game.games / (elapsed.dur.as_secs() as usize + 1),
+                          game.wins  / (elapsed.dur.as_secs() as usize + 1));
+    print!("Score: {} | Winrate: {:4.2}% ({}/{}) | Moves: {}       \r", 
                           game.score, 
                           100.0 *(game.wins as f32 / game.games as f32),
                           game.wins,
                           game.games,
-                          game.moves));
-    let elapsed = Dur { dur: game.started.elapsed() };
-    term::printw(&format!("Testing for {}, {} games/sec, {} wins/sec",
-                          elapsed,
-                          game.games / (elapsed.dur.as_secs() as usize + 1),
-                          game.wins  / (elapsed.dur.as_secs() as usize + 1)));
+                          game.moves);
+    io::stdout().flush();
 
 }
 

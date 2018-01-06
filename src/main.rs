@@ -16,15 +16,20 @@ static COLOR_BG: i16 = 17;
 static PAIR_RED: i16 = 1;
 static PAIR_BLK: i16 = 2;
 
+static fancy: bool = false;
+static delay_ms: u64 = 0;
+
 
 fn main() {
-    term::initscr();
-    term::start_color();
-    term::init_color(COLOR_RED, 219*4, 51*4, 47*4);
-    term::init_color(COLOR_BLK, 256*4, 256*4, 256*4);
-    term::init_color(COLOR_BG, 0, 0, 0);
-    term::init_pair(PAIR_RED, COLOR_RED, COLOR_BG);
-    term::init_pair(PAIR_BLK, COLOR_BLK, COLOR_BG);
+    if fancy {
+        term::initscr();
+        term::start_color();
+        term::init_color(COLOR_RED, 219*4, 51*4, 47*4);
+        term::init_color(COLOR_BLK, 256*4, 256*4, 256*4);
+        term::init_color(COLOR_BG, 0, 0, 0);
+        term::init_pair(PAIR_RED, COLOR_RED, COLOR_BG);
+        term::init_pair(PAIR_BLK, COLOR_BLK, COLOR_BG);
+    }
 
     play_computer();
 
@@ -39,34 +44,31 @@ fn play_computer() {
 
     let mut player = player::create_player(game);
 
-    print_stats(&player.game);
-    term::refresh();
-    let auto = true;
-    delay(auto);
+    print(&player.game);
+    delay();
+
     loop {
         if game_won(&mut player.game) {
             game_restart(&mut player.game);
             player::player_reset(&mut player);
         } else {
-            term::clear();
-            if player::play_one_move(&mut player) {
-                /*
-                print_stats(&player.game);
-                term::refresh();
-                delay(auto);
-                */
-            } else {
+            if !player::play_one_move(&mut player) {
                 game_restart(&mut player.game);
-                print_stats(&player.game);
-                term::refresh();
-                delay(auto);
+                player::player_reset(&mut player);
             }
+            print(&player.game);
+            delay();
         }
     }
 }
 
 #[allow(dead_code)]
 fn play_human() {
+    if !fancy {
+        println!("Human play is only available in fancy mode");
+        return;
+    }
+
     let deck = deck();
     let mut deck = shuffle(&deck);
     let mut game = game_init();
@@ -180,15 +182,20 @@ fn depth_from_char(ch: i32) -> usize {
     }
 }
 
-fn delay(auto: bool) {
-    if auto {
-        //wait_millis(5);
-    } else {
-        term::getch();
-    }
+fn delay() {
+    wait_millis(delay_ms);
 }
 
 fn wait_millis(millis: u64) {
     let dur = time::Duration::from_millis(millis);
     sleep(dur);
+}
+
+fn print(game: &Game) {
+    if fancy {
+        print_game(game);
+        term::refresh();
+    } else {
+        print_stats(game);
+    }
 }
