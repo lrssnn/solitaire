@@ -87,8 +87,28 @@ pub fn print_stats(game: &Game) {
 
 }
 
+pub fn print_stats_curses(game: &Game, ended: time::Instant) {
+    let elapsed = Dur { dur: ended.duration_since(game.started) };
+    term::printw(&format!("{} | {} g/s, {} w/s ",
+                          elapsed,
+                          game.games / (elapsed.dur.as_secs() as usize + 1),
+                          game.wins  / (elapsed.dur.as_secs() as usize + 1)));
+    term::printw(&format!("Score: {} | Winrate: {:4.2}% ({}/{}) | Moves: {}      \n\r", 
+                          game.score, 
+                          100.0 *(game.wins as f32 / game.games as f32),
+                          game.wins,
+                          game.games,
+                          game.moves));
+}
+
+
 pub fn print_game(game: &Game) {
-    // Status Line
+    term::clear();
+    let elapsed = Dur { dur: game.started.elapsed() };
+    term::printw(&format!("{} | {} g/s, {} w/s ",
+                          elapsed,
+                          game.games / (elapsed.dur.as_secs() as usize + 1),
+                          game.wins  / (elapsed.dur.as_secs() as usize + 1)));
     term::printw(&format!("Score: {} | Winrate: {:4.2}% ({}/{}) | Moves: {}\n", 
                           game.score, 
                           100.0 *(game.wins as f32 / game.games as f32),
@@ -151,6 +171,7 @@ pub fn print_game(game: &Game) {
         row += 1;
         term::printw("\n");
     }
+    term::refresh();
 }
 
 pub fn game_won(game: &mut Game) -> bool {

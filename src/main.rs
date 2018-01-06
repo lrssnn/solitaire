@@ -8,6 +8,7 @@ use std::thread::sleep;
 use game::*;
 use std::char;
 
+use player::Player;
 use ncurses as term;
 
 static COLOR_RED: i16 = 16;
@@ -16,26 +17,31 @@ static COLOR_BG: i16 = 17;
 static PAIR_RED: i16 = 1;
 static PAIR_BLK: i16 = 2;
 
-static fancy: bool = false;
 static delay_ms: u64 = 0;
+static test_secs: u64 = 60 * 15;
 
 
 fn main() {
-    if fancy {
-        term::initscr();
-        term::start_color();
-        term::init_color(COLOR_RED, 219*4, 51*4, 47*4);
-        term::init_color(COLOR_BLK, 256*4, 256*4, 256*4);
-        term::init_color(COLOR_BG, 0, 0, 0);
-        term::init_pair(PAIR_RED, COLOR_RED, COLOR_BG);
-        term::init_pair(PAIR_BLK, COLOR_BLK, COLOR_BG);
-    }
 
-    play_computer();
+    let silent = profile_silent();
+    let silent_end = time::Instant::now();
+    let game = profile_stats_game();
+    let game_end = time::Instant::now();
+    let mv = profile_stats_move();
+    let mv_end = time::Instant::now();
+    let full = profile_full_print();
+    let full_end = time::Instant::now();
 
+    print_stats_curses(&silent.game, silent_end);
+    print_stats_curses(&game.game, game_end);
+    print_stats_curses(&mv.game, mv_end);
+    print_stats_curses(&full.game, full_end);
+    term::refresh();
+    term::getch();
+    
 }
 
-fn play_computer() {
+fn profile_silent() -> Player {
     let deck = deck();
     let mut deck = shuffle(&deck);
     let mut game = game_init();
@@ -44,10 +50,7 @@ fn play_computer() {
 
     let mut player = player::create_player(game);
 
-    print(&player.game);
-    delay();
-
-    loop {
+    while player.game.started.elapsed() <=  std::time::Duration::from_secs(test_secs) {
         if game_won(&mut player.game) {
             game_restart(&mut player.game);
             player::player_reset(&mut player);
@@ -56,18 +59,97 @@ fn play_computer() {
                 game_restart(&mut player.game);
                 player::player_reset(&mut player);
             }
-            print(&player.game);
-            delay();
         }
     }
+    print_stats(&player.game);
+    println!("");
+    player
+}
+
+fn profile_stats_game() -> Player {
+    let deck = deck();
+    let mut deck = shuffle(&deck);
+    let mut game = game_init();
+
+    deal(&mut game, &mut deck);
+
+    let mut player = player::create_player(game);
+
+    while player.game.started.elapsed() < std::time::Duration::from_secs(test_secs) {
+        if game_won(&mut player.game) {
+            game_restart(&mut player.game);
+            player::player_reset(&mut player);
+        } else {
+            if !player::play_one_move(&mut player) {
+                game_restart(&mut player.game);
+                player::player_reset(&mut player);
+                print_stats(&player.game);
+            }
+        }
+    }
+    println!("");
+    player
+}
+
+fn profile_stats_move() -> Player {
+    let deck = deck();
+    let mut deck = shuffle(&deck);
+    let mut game = game_init();
+
+    deal(&mut game, &mut deck);
+
+    let mut player = player::create_player(game);
+
+    while player.game.started.elapsed() < std::time::Duration::from_secs(test_secs) {
+        if game_won(&mut player.game) {
+            game_restart(&mut player.game);
+            player::player_reset(&mut player);
+        } else {
+            if !player::play_one_move(&mut player) {
+                game_restart(&mut player.game);
+                player::player_reset(&mut player);
+            }
+        }
+        print_stats(&player.game);
+    }
+    println!("");
+    player
+}
+
+fn profile_full_print() -> Player{
+    term::initscr();
+    term::start_color();
+    term::init_color(COLOR_RED, 219*4, 51*4, 47*4);
+    term::init_color(COLOR_BLK, 256*4, 256*4, 256*4);
+    term::init_color(COLOR_BG, 0, 0, 0);
+    term::init_pair(PAIR_RED, COLOR_RED, COLOR_BG);
+    term::init_pair(PAIR_BLK, COLOR_BLK, COLOR_BG);
+
+    let deck = deck();
+    let mut deck = shuffle(&deck);
+    let mut game = game_init();
+
+    deal(&mut game, &mut deck);
+
+    let mut player = player::create_player(game);
+
+    while player.game.started.elapsed() < std::time::Duration::from_secs(test_secs) {
+        if game_won(&mut player.game) {
+            game_restart(&mut player.game);
+            player::player_reset(&mut player);
+        } else {
+            if !player::play_one_move(&mut player) {
+                game_restart(&mut player.game);
+                player::player_reset(&mut player);
+            }
+        }
+        print_game(&player.game);
+    }
+    player
 }
 
 #[allow(dead_code)]
 fn play_human() {
-    if !fancy {
-        println!("Human play is only available in fancy mode");
-        return;
-    }
 
     let deck = deck();
     let mut deck = shuffle(&deck);
@@ -191,11 +273,3 @@ fn wait_millis(millis: u64) {
     sleep(dur);
 }
 
-fn print(game: &Game) {
-    if fancy {
-        print_game(game);
-        term::refresh();
-    } else {
-        print_stats(game);
-    }
-}
