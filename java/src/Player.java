@@ -79,59 +79,62 @@ class Player {
 
         for (i, pile) in game.piles.clone().iter().enumerate() {
         for (int i = 0; i < game.piles.length; i++) {
-            Vector<Card> pile = game.piles.
+            Vector<Card> pile = game.piles[i];
             
-            if pile.is_empty() {
+            if pile.isEmpty() {
                 continue;
             }
 
-            let lowest_card = pile.last().unwrap().clone();
+            Card lowest_card = pile.lastElement();
             
-            if player.restrained && lowest_card.number > player.found_level {
+            if (this.restrained && lowest_card.number > this.found_level) {
                 continue;
             }
 
-            let target_suit = match lowest_card.suit {
-                'H' => 0,
-                'S' => 1,
-                'D' => 2,
-                'C' => 3,
-                _ => 4,
-            };
+            char target_suit = get_target_suit(lowest_card.suit);
 
-            match game.foundations[target_suit].last() {
-                None =>    if lowest_card.number != 1 { continue; },
-                Some(c) => if c.number + 1 != lowest_card.number { continue; },
+            if (game.foundations[target_suit].isEmpty()) {
+                if (lowest_card.number != 1) {
+                    continue;
+                } 
+            } else if (game.foundations[target_suit].lastElement().number + 1 != lowest_card.number) {
+                continue;
             }
 
             // We should be able to make a move now
-            if !make_move(&mut game, i, 1, target_suit + 7) {
-                panic!("ERROR in play_pile_found");
+            if (!make_move(&mut game, i, 1, target_suit + 7)) {
+                System.out.println("ERROR in play_pile_found");
+                return false;
             }
-            player.played_this_round = true;
+            this.played_this_round = true;
 
             // Update found_level if necessary
-            let mut update = true;
-            for found in &game.foundations {
-                match found.last() {
-                    None => update = false,
-                    Some(c) => if c.number + 1 < player.found_level { update = false },
+            boolean update = true;
+            for (found : game.foundations) {
+                if (found.isEmpty()) {
+                    update = false;
+                } else {
+                    if (found.lastElement().number + 1 < this.found_level) {
+                        update = false;
+                    }
                 }
             }
-            if update {
+            if (update) {
                 player.found_level += 1;
             }
             return true;
         }
-        false 
+        return false 
     }
 
-    fn play_pile_pile(player: &mut Player) -> bool {
-        let mut game = &mut player.game;
+    public boolean play_pile_pile() {
+        Game game = this.game;
 
+        for (int i = 0; i < game.piles.length; i++) {
         for (i, pile) in game.piles.clone().iter().enumerate() {
+            Vector<Card> pile = game.piles[i];
 
-            if pile.is_empty() {
+            if (pile.isEmpty()) {
                 continue;
             }
 
