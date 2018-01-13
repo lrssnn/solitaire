@@ -1,4 +1,6 @@
 import java.util.Vector;
+import java.time.Instant;
+import java.time.Duration;
 
 class Game {
     public Vector<Card>[] piles;
@@ -9,79 +11,68 @@ class Game {
     public int games,
     public int wins,
     public int moves,
-    public int started,
+    public Instant started,
 
     public Game() {
-            piles = [Vector<Card>(),Vector<Card>(),Vector<Card>(),Vector<Card>(), 
-                     Vector<Card>(), Vector<Card>(), Vector<Card>()];
-            side_deck = Vector<Card>();
-            hand = Vector<Card>();
-            foundations = [Vector<Card>(),Vector<Card>(),Vector<Card>(),Vector<Card>()];
-            score = 0;
-            games = 0;
-            wins = 0;
-            moves = 0;
-            started = time::Instant::now();
-        }
+
+        piles = new Vector<Card>[7];
+        for(int i = 0; i < 7; i++) piles[i] = new Vector<Card>();
+
+        foundations = new Vector<Card>[4];
+        for(int i = 0; i < 4; i++) foundations[i] = new Vector<Card>();
+
+        side_deck = new Vector<Card>();
+        hand      = new Vector<Card>();
+        score     = 0;
+        games     = 0;
+        wins      = 0;
+        moves     = 0;
+        started   = Instant.now();
     }
 
     // Creates a new shuffled deck and begins the game
-    public void game_restart(Game game) {
+    public void restart() {
         Card[] deck = deck();
         Card[] shuffled = shuffle(&deck);
-        game.deal(shuffled);
-        game.score -= 52;
-        game.games += 1;
+        this.deal(shuffled);
+        this.score -= 52;
+        this.games += 1;
     }
 
     // Deals the given deck into the given game. The deck given should ALREADY BE SHUFFLED
-    pub fn deal(game: &mut Game, deck: &mut Vec<Card>) {
-        game.piles = [vec![],vec![],vec![],vec![], vec![], vec![], vec![]];
-        game.foundations = [vec![], vec![], vec![], vec![]];
-        game.hand = vec![];
+    public void deal(Card[] deck) {
+        this.piles = [Vector<Card>(),Vector<Card>(),Vector<Card>(),Vector<Card>(), 
+                     Vector<Card>(), Vector<Card>(), Vector<Card>()];
+        this.foundations = [Vector<Card>(),Vector<Card>(),Vector<Card>(),Vector<Card>()];
+        this.hand = Vector<Card>();
 
         // Populate the piles
-        for (i, pile) in game.piles.iter_mut().enumerate() {
-            for _j in 0..i {
-                pile.push(deck.pop().unwrap());
+        for (int i = 0; i < this.piles.length(); i++) {
+            for (int j = 0; j < i; j++) {
+                this.piles[i].push(deck.pop());
             }
-            pile.push(reveal(&deck.pop().unwrap()));
+            this.piles[i].push(reveal(deck.pop()));
         }
 
-        game.side_deck = deck.to_vec();
+        game.side_deck = deck;
     }
 
-    pub fn print_stats(game: &Game) {
-        let elapsed = Dur { dur: game.started.elapsed() };
-        print!("{} | {} g/s, {} w/s ",
-                              elapsed,
+    public void print_stats() {
+        System.out.print("{} | {} g/s, {} w/s ",
+                              Duration.between(this.started, Instant.now()).toString(),
                               game.games / (elapsed.dur.as_secs() as usize + 1),
                               game.wins  / (elapsed.dur.as_secs() as usize + 1));
-        print!("Score: {} | Winrate: {:4.2}% ({}/{}) | Moves: {}       \r", 
+        System.out.print("Score: {} | Winrate: {:4.2}% ({}/{}) | Moves: {}       \r", 
                               game.score, 
                               100.0 *(game.wins as f32 / game.games as f32),
                               game.wins,
                               game.games,
                               game.moves);
-        io::stdout().flush();
+        System.out.flush();
 
     }
 
-    pub fn print_stats_curses(game: &Game, ended: time::Instant) {
-        let elapsed = Dur { dur: ended.duration_since(game.started) };
-        term::printw(&format!("{} | {} g/s, {} w/s ",
-                              elapsed,
-                              game.games / (elapsed.dur.as_secs() as usize + 1),
-                              game.wins  / (elapsed.dur.as_secs() as usize + 1)));
-        term::printw(&format!("Score: {} | Winrate: {:4.2}% ({}/{}) | Moves: {}      \n\r", 
-                              game.score, 
-                              100.0 *(game.wins as f32 / game.games as f32),
-                              game.wins,
-                              game.games,
-                              game.moves));
-    }
-
-
+/*
     pub fn print_game(game: &Game) {
         term::clear();
         let elapsed = Dur { dur: game.started.elapsed() };
@@ -153,321 +144,310 @@ class Game {
         }
         term::refresh();
     }
+*/
 
-    pub fn game_won(game: &mut Game) -> bool {
-        for found in &game.foundations {
-            match found.last() {
-                None => {return false},
-                Some(c) => { if c.number != 13 {return false}}
+    public boolean is_won() {
+        for (Vector<Card> found : this.foundations) {
+            if (found.size() != 13) {
+                return false;
             }
         }
-        game.wins += 1;
-        game.score += 5000;
-        true
+        this.wins += 1;
+        this.score += 5000;
+        return true;
     }
 
     // Make a move. pile indices start at zero, naturally, with piles 7 - 10 representing the
     // foundations (Hearts, Spades, Diamonds, Clubs)
     // src_depth refers to the number of cards to take from the source pile.
-    pub fn make_move(game: &mut Game, src_pile: usize, src_depth: usize, dest_pile: usize) -> bool {
+    public boolean make_move(int src_pile, int src_depth, int dest_pile) {
 
-        game.moves += 1; // Don't talk to me
+        this.moves += 1; // Don't talk to me
         
         // If src pile is 11, we are taking from the draw hand:
         //   - must be a card in the hand to take
         //   - depth must be one
-        if src_pile == 11 {
-            if game.hand.is_empty() {
-                term::printw("Error: No cards in hand\n");
+        if (src_pile == 11) {
+            if (this.hand.isEmpty()) {
+                System.out.print("Error: No cards in hand\n");
                 return false;
-            } else if src_depth != 1 {
-                term::printw("Error: Cannot take more than one card from hand\n");
+            } else if (src_depth != 1) {
+                System.out.print("Error: Cannot take more than one card from hand\n");
                 return false;
             }
 
             // Determine target area
-            if dest_pile > 6 {
-                return move_hand_found(game, dest_pile);
+            if (dest_pile > 6) {
+                return this.move_hand_found(dest_pile);
             } else {
-                return move_hand_pile(game, dest_pile);
+                return this.move_hand_pile(dest_pile);
             }
-            
         }
             
             
         // Make sure that there is a card where we want to take from
-        if game.piles[src_pile].len() < src_depth {
-            term::printw("Error: Trying to take non-existant card\n");
+        if (this.piles[src_pile].length < src_depth) {
+            System.out.print("Error: Trying to take non-existant card\n");
             return false;
         }
         
         if dest_pile > 6 {
-            move_pile_found(game, src_pile, src_depth, dest_pile)
+            game.move_pile_found(src_pile, src_depth, dest_pile)
         } else {
-            move_pile_pile(game, src_pile, src_depth, dest_pile)
+            game.move_pile_pile(src_pile, src_depth, dest_pile)
         }
-
     }
-    pub fn move_hand_found(game: &mut Game, dest_pile: usize) -> bool {
+
+    public boolean move_hand_found(int dest_pile) {
         // Moving to a foundation:
         //   - Suit must match
         //   - number must be one higher
-        let card = game.hand.last().unwrap().clone();
-        if !suit_match(dest_pile, &card) {
-            term::printw("Error: Suits must match on the foundations\n");
+        Card card = this.hand.lastElement();
+        if (!suit_match(dest_pile, card)) {
+            System.out.print("Error: Suits must match on the foundations\n");
             return false;
-        } else if !number_match_asc(game.foundations[dest_pile - 7].len(), &card) {
-            term::printw("Error: Numbers must ascend on the foundations\n");
+        } else if (!number_match_asc(this.foundations[dest_pile - 7].length, card)) {
+            System.out.print("Error: Numbers must ascend on the foundations\n");
             return false;
         }
 
-        let card = game.hand.pop().unwrap();
-        game.foundations[dest_pile - 7].push(card);
-        game.score += 5;
-        true
+        this.hand.remove(card);
+        this.foundations[dest_pile - 7].push(card);
+        this.score += 5;
+        return true
     }
 
 
-    pub fn move_hand_pile(game: &mut Game, dest_pile: usize) -> bool {
+    public boolean move_hand_pile(game: &mut Game, dest_pile: usize) {
         // Moving to a pile:
         //   - suit must alternate
         //   - number must be one lower
-        let card = game.hand.last().unwrap().clone();
-        if card.number == 13 {
+        Card card = this.hand.lastElement();
+        if (card.number == 13) {
             // King:
             //   - Destination pile must be empty
-            if !game.piles[dest_pile].is_empty() {
-                term::printw("Error: Kings can only be moved to empty piles\n");
+            if (!this.piles[dest_pile].isEmpty()) {
+                System.out.print("Error: Kings can only be moved to empty piles\n");
                 return false;
             }
-        } else if game.piles[dest_pile].is_empty() {
-            term::printw("Error: Only Kings can move to empty piles\n");
+        } else if (this.piles[dest_pile].isEmpty()) {
+            System.out.print("Error: Only Kings can move to empty piles\n");
             return false;
-        } else if !suit_alternates(&card, game.piles[dest_pile].last().unwrap()) {
-            term::printw("Error: Suits must alternate on the piles\n");
+        } else if (!suit_alternates(&card, this.piles[dest_pile].lastElement())) {
+            System.out.print("Error: Suits must alternate on the piles\n");
             return false;
-        } else if !number_match_desc(game.piles[dest_pile].last(), &card) {
-            term::printw("Error: Numbers must decrease by one on the piles\n");
+        } else if (!number_match_desc(this.piles[dest_pile].lastElement(), &card)) {
+            System.out.print("Error: Numbers must decrease by one on the piles\n");
             return false;
         }
         
-        let card = game.hand.pop().unwrap();
-        game.piles[dest_pile].push(reveal(&card));
-        true
+        this.hand.remove(card);
+        this.piles[dest_pile].push(reveal(card));
+        return true
     }
-    pub fn move_pile_found(game: &mut Game, src_pile: usize, src_depth: usize, dest_pile: usize) -> bool {
+
+    public boolean move_pile_found(int src_pile, int src_depth, int dest_pile) {
         // Trying to move to a foundation:
         //   - Only one card allowed
         //   - Suit must match
         //   - Number must be one higher
-        let card = (game.piles[src_pile][game.piles[src_pile].len() - src_depth]).clone();
-        if src_depth != 1 {
-            term::printw("Error: Cannot move more than one card to foundation\n");
+        Card card = this.piles[src_pile][this.piles[src_pile].length - src_depth];
+        if (src_depth != 1) {
+            System.out.print("Error: Cannot move more than one card to foundation\n");
             return false;
-        } else if !suit_match(dest_pile, &card) {
-            term::printw("Error: Suits must match on the foundation\n");
+        } else if (!suit_match(dest_pile, card)) {
+            System.out.print("Error: Suits must match on the foundation\n");
             return false;
-        } else if !number_match_asc(game.foundations[dest_pile - 7].len(), &card) {
-            term::printw("Error: Numbers must ascend by one on the foundation\n");
+        } else if (!number_match_asc(game.foundations[dest_pile - 7].length, card)) {
+            System.out.print("Error: Numbers must ascend by one on the foundation\n");
             return false;
         }
 
         // Validation has passed:
-        let card = game.piles[src_pile].pop().unwrap();
-        game.foundations[dest_pile - 7].push(card);
+        this.piles[src_pile].remove(card);
+        this.foundations[dest_pile - 7].push(card);
         // Make sure the last card in the pile is revealed if necessary
-        match game.piles[src_pile].last_mut() {
-            None => {},
-            Some(c) => {c.up = true}
-        };
-        game.score += 5;
-        true
+        if (this.piles[src_pile].length > 0) {
+            this.piles[src_pile].last().up = true;
+        }
+        this.score += 5;
+        return true
     }
 
-    pub fn move_pile_pile(game: &mut Game, src_pile: usize, src_depth: usize, dest_pile: usize) -> bool {
+    public boolean move_pile_pile(int src_pile, int src_depth, int dest_pile) {
 
         // Trying to move to another pile (we already know the source stack exists):
 
-        let card = (game.piles[src_pile][game.piles[src_pile].len() - src_depth]).clone();
+        Card card = this.piles[src_pile][game.piles[src_pile].length - src_depth];
 
-        if card.number == 13 {
+        if (card.number == 13) {
             // King:
             //   - Destination pile must be empty
-            if !game.piles[dest_pile].is_empty() {
-                term::printw("Error: Kings can only be moved to empty piles\n");
+            if (!game.piles[dest_pile].isEmpty()) {
+                System.out.print("Error: Kings can only be moved to empty piles\n");
                 return false;
             }
-        } else if game.piles[dest_pile].is_empty() {
-                term::printw("Error: Cannot move non-king to empty pile\n");
+        } else if (game.piles[dest_pile].isEmpty()) {
+                System.out.print("Error: Cannot move non-king to empty pile\n");
                 return false;
-        } else if !suit_alternates(&card, game.piles[dest_pile].last().unwrap()) {
-            term::printw("Error: Suit colours must alternate on piles\n");
+        } else if (!suit_alternates(card, game.piles[dest_pile].lastElement())) {
+            System.out.print("Error: Suit colours must alternate on piles\n");
             return false;
-        } else if !number_match_desc(game.piles[dest_pile].last(), &card) {
-            term::printw("Error: Numbers must decrease by one on piles\n");
+        } else if (!number_match_desc(game.piles[dest_pile].last(), card)) {
+            System.out.print("Error: Numbers must decrease by one on piles\n");
             return false;
         }
 
         // Validation has passed:
-        let split_index = game.piles[src_pile].len() - src_depth;
-        let mut cards = game.piles[src_pile].split_off(split_index);
-        game.piles[dest_pile].append(&mut cards);
-        match game.piles[src_pile].last_mut() {
-            None => {},
-            Some(c) => {c.up = true}
-        };
-        true
+        int split_index = this.piles[src_pile].length - src_depth;
+
+        // Split the array at that index:
+        Vector<Card> cards = new Vector<Card>();
+        int original_length = this.piles[src_pile].length;
+
+        for (int i = split_index; i < original_length; i++) {
+            // Note remove(split_index), remove(i) would skip elements (think about it)
+            cards.add(0, this.piles[src_pile].remove(split_index));
+        }
+
+        // Now 'cards' should be everything that was on the pile after split_index
+
+        this.piles[dest_pile].addAll(this.piles[dest_pile].size(), cards);
+        if (!this.piles[src_pile].isEmpty()) {
+            this.piles[src_pile].last().up = true;
+        }
+        return true
     }
 
     // Returns whether the hand was reset
-    pub fn draw(game: &mut Game) -> bool {
-        if game.side_deck.is_empty() {
-            game.side_deck = game.hand.clone();
-            game.side_deck.reverse();
-            game.hand = vec![];
+    public boolean draw() {
+        if (this.side_deck.isEmpty()) {
+            this.side_deck = game.hand.clone();
+            this.side_deck.reverse();
+            this.hand = vec![];
             true
         } else {
             let mut moved = 0;
-            while moved < 3 && !game.side_deck.is_empty() {
-                game.hand.push(reveal(&game.side_deck.pop().unwrap()));
+            while moved < 3 && !this.side_deck.isEmpty() {
+                this.hand.push(reveal(&this.side_deck.pop().unwrap()));
                 moved += 1;
             }
             false
         }
     }    
+}
 
-    pub fn suit_match(dest: usize, card: &Card) -> bool {
-        match dest {
-            7 => card.suit == 'H',
-            8 => card.suit == 'S',
-            9 => card.suit == 'D',
-            10 => card.suit == 'C',
-            _ => false,
+    public boolean suit_match(int dest, Card card) {
+        if (dest == 7) {
+            return card.suit == 'H';
         }
-    }
-
-    pub fn suit_alternates(a: &Card, b: &Card) -> bool {
-        match a.suit {
-            'H' | 'D' => { b.suit == 'C' || b.suit == 'S'},
-            'C' | 'S' => { b.suit == 'H' || b.suit == 'D'},
-            _ => false,
+        if (dest == 8) {
+            return card.suit == 'S';
         }
-    }
-
-    pub fn number_match_asc(base: usize, card: &Card) -> bool {
-        card.number - 1 == base as u8
-    }
-
-    pub fn number_match_desc(dest: Option<&Card>, new: &Card) -> bool {
-        match dest {
-            None => new.number == 13,
-            Some(c) => c.number - 1 == new.number,
+        if (dest == 9) {
+            return card.suit == 'D';
         }
-    }
-
-    pub fn deck() -> Vec<Card> {
-        let mut deck = vec![];
-        for suit in &['H', 'D', 'C', 'S'] {
-            for i in 1..14 {
-                deck.push(card(suit, i));
-            }
+        if (dest == 10) {
+            return card.suit == 'C';
         }
-        deck
+        return false;
     }
 
-    pub fn card(suit: &char, number: u8) -> Card {
-        Card { suit: *suit, number: number, up: false}
+    public boolean suit_alternates(Card a, Card b) {
+        if (a.suit == 'H' || a.suit == 'D') {
+            return b.suit == 'C' || b.suit == 'S';
+        }
+        if (a.suit == 'C' || a.suit == 'S') {
+            return b.suit == 'H' || b.suit == 'D';
+        }
+        return false;
     }
 
-    pub fn card_clone(card: &Card) -> Card {
-        Card { suit: card.suit, number: card.number, up: card.up}
+    public boolean number_match_asc(int base, Card card) {
+        return card.number - 1 == base;
     }
 
-    pub fn reveal(card: &Card) -> Card {
-        Card { suit: card.suit, number: card.number, up: true}
-    }
-
-    pub fn card_str_disp(card: &Card) -> String {
-        if card.up { card_string(card) }
-        else { " XX".to_string() }
-    }
-
-    pub fn card_string(card: &Card) -> String {
-        if card.number == 1 {
-            format!(" A{}", card.suit)
-        } else if card.number == 11 {
-            format!(" J{}", card.suit)
-        } else if card.number == 12 {
-            format!(" Q{}", card.suit)
-        } else if card.number == 13 {
-            format!(" K{}", card.suit)
+    public boolean number_match_desc(Card dest, Card src) {
+        if dest == null {
+            return src.number == 13;
         } else {
-            format!("{:2}{}", card.number, card.suit)
+            return dest.number - 1 == src.number,
         }
     }
 
-    pub fn shuffle(deck: &[Card]) -> Vec<Card> {
-        let mut rng = rand::thread_rng();
-        let mut res = vec![];
-        let mut used = [false; 52];
+    public Vector<Card> deck() {
+        Vector<Card> deck = new Vector<Card>();
 
-        for _card in 0..52 {
-            let mut choice: usize = rng.gen::<usize>() % 52;
-            while used[choice] {
-                choice = rng.gen::<usize>() % 52;
+        char[] suits = ['H', 'D', 'C', 'S'];
+        for (suit : suits) {
+            for (int i = 1; i < 14; i++) { 
+                deck.push(Card(suit, i));
             }
-            res.push(card_clone(&deck[choice]));
+        }
+        return deck;
+    }
+}
+
+class Card {
+
+    public char suit;
+    public int  number;
+    public boolean up;
+
+    public Card(char suit, int number){
+        this.suit = suit;
+        this.number = number;
+        this.up = false;
+    }
+
+    public Card clone() {
+        Card card = Card(this.suit, this.number);
+        card.up = this.up;
+        return card;
+    }
+
+    public Card reveal(card: &Card) -> Card {
+        Card card = Card(this.suit, this.number);
+        card.up = true;
+        return card;
+    }
+
+    public String str_disp() {
+        if this.up { 
+            return card_string(card) 
+        } else { 
+            return " XX" 
+        }
+    }
+
+    public String card_string() {
+        if this.number == 1 {
+            return " A" + card.suit;
+        } else if card.number == 11 {
+            return " J{}" + card.suit;
+        } else if card.number == 12 {
+            return " Q{}" + card.suit;
+        } else if card.number == 13 {
+            return " K{}" + card.suit;
+        } else {
+            return "" + card.number + card.suit;
+        }
+    }
+
+    public Vector<Card> shuffle(Vector<Card> deck) {
+        Random rand = new Random();
+
+        Vector<Card> res = new Vector<Card>();
+        boolean[] used = new boolean[52];
+
+        for (int card = 0; card < 52; card += 1) {
+            int choice = rand.nextInt(52);
+            while (used[choice]) {
+                choice = rand.nextInt(52);
+            }
+            res.push(&deck[choice].clone());
             used[choice] = true;
         }
 
-        res
-    }
-
-    pub fn set_colour(card: &Card) {
-        if card.up {
-           match card.suit {
-               'H' | 'D' => {
-                   term::attron(term::COLOR_PAIR(PAIR_RED));
-               },
-               'C' | 'S' => {
-                   term::attron(term::COLOR_PAIR(PAIR_BLK));
-               },
-               _ => ()
-           }
-        }
-    }
-
-    pub fn clear_colour(card: &Card) {
-        if card.up {
-           match card.suit {
-               'H' | 'D' => {
-                   term::attroff(term::COLOR_PAIR(PAIR_RED));
-               },
-               'C' | 'S' => {
-                   term::attroff(term::COLOR_PAIR(PAIR_BLK));
-               },
-               _ => ()
-           }
-        }
-    }
-        
-    struct Dur {
-        dur: time::Duration,
-    }
-    impl fmt::Display for Dur {
-        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-            let mut secs = self.dur.as_secs();
-
-            let hrs = secs/3600;
-            secs -= hrs * 3600;
-
-            let mins = secs/60;
-            secs -= mins * 60;
-            write!(f, "{:02}:{:02}:{:02}", hrs, mins, secs)
-        }
-    }
-    pub struct Card {
-        pub suit: char,
-        pub number: u8,
-        pub up: bool,
+        return res;
     }
